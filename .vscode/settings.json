@@ -1,0 +1,22 @@
+{
+    "files.watcherExclude": {
+        "**/target": true
+    },
+
+    "files.exclude": {
+        ".bloop": true,
+        ".metals": true,
+        ".bsp": true,
+        "project": true,
+        "target": true,
+        ".scalafmt.conf": true,
+        ".vscode": true
+    },
+    "task.allowAutomaticTasks": "on",
+    "workbench.colorCustomizations": {
+        "terminal.background": "#000000",
+        "terminal.foreground": "#ffffff"
+    }   ,
+    "terminal.integrated.tabs.location": "left",
+    "workbench.panel.defaultLocation": "left"
+}
