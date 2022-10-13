@@ -6,6 +6,6 @@ lazy val socl = (project in file("."))
     name := "socl",
     Compile / scalaSource := baseDirectory.value / "src",
 
-    libraryDependencies += "org.jocl" % "jocl" % "2.0.4"
-
+    libraryDependencies += "org.jocl" % "jocl" % "2.0.4",
+    scalacOptions += "-explain"
   )
