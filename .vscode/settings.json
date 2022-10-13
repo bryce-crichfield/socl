@@ -17,6 +17,8 @@
         "terminal.background": "#000000",
         "terminal.foreground": "#ffffff"
     }   ,
+    "terminal.integrated.fontSize": 9.5,
     "terminal.integrated.tabs.location": "left",
-    "workbench.panel.defaultLocation": "left"
+    "workbench.panel.defaultLocation": "left",
+    "workbench.sideBar.location": "right"
 }
