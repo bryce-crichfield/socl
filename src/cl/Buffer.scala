@@ -6,6 +6,10 @@ import org.jocl.CL.*
 trait BufferFlag {
   val enumeration: Long
 }
+// Designed to match the kernel type signature
+// `__global const float* data` == KernelAccess.ReadOnly
+// `__global float* data` == KernelAccess.WriteOnly
+// `__global float* data` == KernelAccess.ReadWrite
 enum KernelAccess(val enumeration: Long) extends BufferFlag {
   case ReadOnly extends KernelAccess(CL_MEM_READ_ONLY) 
   case WriteOnly extends KernelAccess(CL_MEM_WRITE_ONLY) 
@@ -16,13 +20,14 @@ enum HostAccess(val enumeration: Long)  extends BufferFlag {
   case ReadOnly extends HostAccess(CL_MEM_HOST_READ_ONLY) 
   case WriteOnly extends HostAccess(CL_MEM_HOST_WRITE_ONLY) 
   case NoAccess extends HostAccess(CL_MEM_HOST_NO_ACCESS) 
+  case NoneSpecifed extends HostAccess(0)
 }
 
 enum PointerAccess(val enumeration: Long)  extends BufferFlag {
   case UseHostPointer extends PointerAccess(CL_MEM_USE_HOST_PTR)
   case AllocateHostPointer extends PointerAccess(CL_MEM_ALLOC_HOST_PTR)
   case CopyHostPointer extends PointerAccess(CL_MEM_COPY_HOST_PTR)
-  case None extends PointerAccess(0)
+  case NoneSpecifed extends PointerAccess(0)
 }
 
 
@@ -46,11 +51,11 @@ case class Buffer[T: CLType] (
   }
 }
 
-
-
-
 object Buffer {
-  def apply[A](size: Int, flags: BufferFlag*)
+  def apply[A](size: Int,
+    kernelAccess: KernelAccess = KernelAccess.ReadWrite,
+    hostAccess: HostAccess = HostAccess.NoneSpecifed,
+    pointerAccess: PointerAccess) 
     (arrayInit: Int => A)
     (using context: Context) 
     (using cltype: CLType[A]): Try[Buffer[A]] = 
@@ -62,13 +67,15 @@ object Buffer {
       array.update(i, arrayInit(i))
     }
     val creationPointer = {
-      if flags.contains(PointerAccess.CopyHostPointer) 
-        then cltype.pointer(array)
-      else if flags.contains(PointerAccess.UseHostPointer)
-        then cltype.pointer(array)
-      else null
+      pointerAccess match
+        case PointerAccess.UseHostPointer => cltype.pointer(array)
+        case PointerAccess.AllocateHostPointer => null
+        case PointerAccess.CopyHostPointer => cltype.pointer(array)
+        case PointerAccess.NoneSpecifed => null
+      
     }
-    val flag = flags.foldLeft(0L)((acc, flag) => acc | flag.enumeration)
+    val flag = kernelAccess.enumeration | hostAccess.enumeration | pointerAccess.enumeration
+    //flags.foldLeft(0L)((acc, flag) => acc | flag.enumeration)
     // val id = clCreateBuffer(context.id, flag, bytesize, null, null)
     // new Buffer[A](id, array, pointer, size, bytesize)
     for {
