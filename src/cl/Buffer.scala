@@ -2,7 +2,7 @@ package cl
 
 import cats.Monad
 import cats.implicits.*
-import cats.effect.Resource
+import cats.effect.{Resource, IO}
 import org.jocl.*
 import org.jocl.CL.*
 trait BufferFlag {
@@ -81,20 +81,25 @@ object Buffer {
     } yield new Buffer[A](id, array, pointer, size, bytesize)
   }
 
-  def create[F[_]: Monad, A](size: Int)(init: Int => A)
+  def create[A](size: Int)(init: Int => A)
     (kernelAccess: KernelAccess = KernelAccess.ReadWrite,
     pointerAccess: PointerAccess) 
     (using context: Context) 
-    (using cltype: CLType[A]): Resource[F, Buffer[A]] = 
+    (using cltype: CLType[A]): Resource[IO, Buffer[A]] = 
   {
-      Resource.make[F, Buffer[A]] {
+      Resource.make[IO, Buffer[A]] {
         val data = cltype.array(size)
         for (i <- 0 until size) { data.update(i, init(i)) }
-        Buffer.apply[F, A](data, kernelAccess, pointerAccess) 
+        for {
+          _ <- IO.println("Constructing Buffer")
+          b <- Buffer.apply[IO, A](data, kernelAccess, pointerAccess)
+        } yield b
       } { buffer =>
-        println("Releasing Buffer")
-        Monad[F].pure(clReleaseMemObject(buffer.id))  
-      }
-      
+        for {
+          _ <- IO.println("Destroying Buffer")
+          _ <- IO.pure(clReleaseMemObject(buffer.id))
+        } yield ()
+      } 
   }
+
 }

@@ -2,9 +2,10 @@ package cl
 
 import cats.Monad
 import cats.implicits.*
-import cats.effect.Resource
+import cats.effect.{Resource, IO}
 import org.jocl.*
 import org.jocl.CL.*
+
 
 case class Program(id: cl_program)
 object Program {
@@ -18,11 +19,28 @@ object Program {
     } yield Program(id)
   }
 
-  def create[F[_]: Monad](source: List[String])
-    (using context: Context): Resource[F, Program] = {
-      Resource.make[F, Program](Program.apply[F](source))(program =>
-        println("Releasing Program")
-        Monad[F].pure(clReleaseProgram(program.id)))
+  // def create[F[_]: Monad](source: List[String])
+  //   (using context: Context): Resource[F, Program] = {
+  //     Resource.make[F, Program](Program.apply[F](source))(program =>
+  //       println("Releasing Program");
+  //       Monad[F].pure(()))
+
+  //       // Monad[F].pure(clReleaseProgram(program.id)))
+  // }
+
+  def create(source: List[String])
+    (using context: Context): Resource[IO, Program] = {
+      Resource.make[IO, Program] {
+        for {
+          _ <- IO.println("Acquiring Program")
+          p <- Program.apply[IO](source)
+        } yield p 
+      } { program =>
+        for {
+          _ <- IO.println("Destroying Program")
+          _ <- IO.pure(clReleaseProgram(program.id))
+        } yield ()
+      }
   }
 }
 
@@ -51,13 +69,19 @@ object Kernel {
     }
   }
 
-  def create[F[_]: Monad](program: Program, name: String)
-    (using context: Context): Resource[F, Kernel] = {
-      Resource.make[F, Kernel](Kernel.apply[F](program, name))(kernel =>
-        println("Releasing Kernel")
-        Monad[F].pure(clReleaseKernel(kernel.id)))
+  def create(program: Program, name: String)
+    (using context: Context): Resource[IO, Kernel] = {
+      Resource.make[IO, Kernel] {
+        for {
+          _ <- IO.println("Constructing Kernel")
+          k <- Kernel.apply[IO](program, name)
+        } yield k
+      } { kernel =>
+        for {
+          _ <- IO.println("Destroying Kernel")
+          _ <- IO.pure(clReleaseKernel(kernel.id))
+        } yield ()
+     }
   }
-
 }
-
 
