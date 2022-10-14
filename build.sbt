@@ -7,5 +7,7 @@ lazy val socl = (project in file("."))
     Compile / scalaSource := baseDirectory.value / "src",
 
     libraryDependencies += "org.jocl" % "jocl" % "2.0.4",
+    libraryDependencies += "org.typelevel" %% "cats-core" % "2.8.0",
+    libraryDependencies += "org.typelevel" %% "cats-effect" % "3.4-148221d",
     scalacOptions += "-explain"
   )
